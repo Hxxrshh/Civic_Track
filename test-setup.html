@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicTrack Setup Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-3xl font-bold text-center mb-8 text-blue-600">CivicTrack Setup Test</h1>
+            
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Configuration Status</h2>
+                <div id="configStatus" class="space-y-2">
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-gray-300 mr-2"></span>
+                        <span>Checking configuration...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Supabase Connection Test</h2>
+                <div id="connectionStatus" class="space-y-2">
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-gray-300 mr-2"></span>
+                        <span>Testing connection...</span>
+                    </div>
+                </div>
+                <button id="testConnection" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Test Connection
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Database Tables Test</h2>
+                <div id="tableStatus" class="space-y-2">
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full bg-gray-300 mr-2"></span>
+                        <span>Checking tables...</span>
+                    </div>
+                </div>
+                <button id="testTables" class="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                    Test Tables
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Quick Registration Test</h2>
+                <form id="testRegistration" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Username:</label>
+                        <input type="text" id="testUsername" class="w-full p-2 border rounded" value="testuser">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Email:</label>
+                        <input type="email" id="testEmail" class="w-full p-2 border rounded" value="test@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Password:</label>
+                        <input type="password" id="testPassword" class="w-full p-2 border rounded" value="testpass123">
+                    </div>
+                    <button type="submit" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+                        Test Registration
+                    </button>
+                </form>
+                <div id="registrationResult" class="mt-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test configuration
+        function checkConfig() {
+            const statusDiv = document.getElementById('configStatus');
+            statusDiv.innerHTML = '';
+            
+            const tests = [
+                {
+                    name: 'Config file loaded',
+                    test: () => typeof config !== 'undefined'
+                },
+                {
+                    name: 'Supabase URL configured',
+                    test: () => config.supabase.url !== 'YOUR_SUPABASE_URL'
+                },
+                {
+                    name: 'Supabase Key configured',
+                    test: () => config.supabase.anonKey !== 'YOUR_SUPABASE_ANON_KEY'
+                }
+            ];
+
+            tests.forEach(test => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center';
+                
+                const indicator = document.createElement('span');
+                indicator.className = `w-4 h-4 rounded-full mr-2 ${test.test() ? 'bg-green-500' : 'bg-red-500'}`;
+                
+                const text = document.createElement('span');
+                text.textContent = test.name + (test.test() ? ' ✅' : ' ❌');
+                
+                div.appendChild(indicator);
+                div.appendChild(text);
+                statusDiv.appendChild(div);
+            });
+        }
+
+        // Test Supabase connection
+        async function testConnection() {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.innerHTML = '<div class="flex items-center"><span class="w-4 h-4 rounded-full bg-gray-300 mr-2"></span><span>Testing...</span></div>';
+            
+                         try {
+                 const supabaseClient = window.supabase.createClient(config.supabase.url, config.supabase.anonKey);
+                 const { data, error } = await supabaseClient.from('profiles').select('count').limit(1);
+                
+                if (error) throw error;
+                
+                statusDiv.innerHTML = '<div class="flex items-center"><span class="w-4 h-4 rounded-full bg-green-500 mr-2"></span><span>Connection successful! ✅</span></div>';
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="flex items-center"><span class="w-4 h-4 rounded-full bg-red-500 mr-2"></span><span>Connection failed: ${error.message} ❌</span></div>`;
+            }
+        }
+
+        // Test database tables
+        async function testTables() {
+            const statusDiv = document.getElementById('tableStatus');
+            statusDiv.innerHTML = '<div class="flex items-center"><span class="w-4 h-4 rounded-full bg-gray-300 mr-2"></span><span>Testing...</span></div>';
+            
+                         try {
+                 const supabaseClient = window.supabase.createClient(config.supabase.url, config.supabase.anonKey);
+                 const tables = ['profiles', 'issues', 'issue_photos', 'issue_activities', 'spam_reports', 'notifications'];
+                const results = [];
+                
+                                 for (const table of tables) {
+                     try {
+                         const { data, error } = await supabaseClient.from(table).select('count').limit(1);
+                        results.push({ table, success: !error });
+                    } catch (e) {
+                        results.push({ table, success: false });
+                    }
+                }
+                
+                statusDiv.innerHTML = results.map(result => 
+                    `<div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full ${result.success ? 'bg-green-500' : 'bg-red-500'} mr-2"></span>
+                        <span>${result.table}: ${result.success ? '✅' : '❌'}</span>
+                    </div>`
+                ).join('');
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="flex items-center"><span class="w-4 h-4 rounded-full bg-red-500 mr-2"></span><span>Error: ${error.message} ❌</span></div>`;
+            }
+        }
+
+        // Test registration
+        async function testRegistration(event) {
+            event.preventDefault();
+            const resultDiv = document.getElementById('registrationResult');
+            
+            const username = document.getElementById('testUsername').value;
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            
+            resultDiv.innerHTML = '<div class="text-blue-600">Testing registration...</div>';
+            
+                         try {
+                 const supabaseClient = window.supabase.createClient(config.supabase.url, config.supabase.anonKey);
+                 
+                 const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            username: username,
+                            phone: '1234567890'
+                        }
+                    }
+                });
+                
+                if (error) throw error;
+                
+                resultDiv.innerHTML = '<div class="text-green-600">Registration test successful! ✅</div>';
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="text-red-600">Registration failed: ${error.message} ❌</div>`;
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            checkConfig();
+            
+            document.getElementById('testConnection').addEventListener('click', testConnection);
+            document.getElementById('testTables').addEventListener('click', testTables);
+            document.getElementById('testRegistration').addEventListener('submit', testRegistration);
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,51 @@
+{
+  "name": "civictrack",
+  "version": "1.0.0",
+  "description": "A civic issue reporting and tracking platform for local communities",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "npx serve .",
+    "dev": "python -m http.server 8000",
+    "build": "echo 'No build process needed for static files'",
+    "test": "echo 'No tests specified'"
+  },
+  "keywords": [
+    "civic",
+    "issues",
+    "reporting",
+    "tracking",
+    "community",
+    "local-government",
+    "supabase",
+    "javascript",
+    "html",
+    "tailwind"
+  ],
+  "author": "CivicTrack Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/civictrack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/civictrack/issues"
+  },
+  "homepage": "https://github.com/yourusername/civictrack#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "leaflet": "^1.9.4",
+    "chart.js": "^4.0.0"
+  },
+  "devDependencies": {
+    "serve": "^14.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+} 

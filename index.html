@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicTrack - Report Local Issues</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="config.js"></script>
+    <style>
+        .map-container {
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-blue-600">CivicTrack</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="reportIssueBtn" class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-md hover:bg-red-700">Report Issue</button>
+                    <button id="mapViewBtn" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">Map View</button>
+                    <button id="changePincodeBtn" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">Change Pincode</button>
+                    <button id="authBtn" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">Login</button>
+                    <button id="logoutBtn" class="hidden px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Filters Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <select id="categoryFilter" class="border border-gray-300 rounded-md px-3 py-2">
+                    <option value="">All Categories</option>
+                    <option value="roads">Roads</option>
+                    <option value="lighting">Lighting</option>
+                    <option value="water">Water Supply</option>
+                    <option value="cleanliness">Cleanliness</option>
+                    <option value="safety">Public Safety</option>
+                    <option value="obstructions">Obstructions</option>
+                </select>
+                <select id="statusFilter" class="border border-gray-300 rounded-md px-3 py-2">
+                    <option value="">All Status</option>
+                    <option value="reported">Reported</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+
+                <button id="searchBtn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Search Issues</button>
+            </div>
+        </div>
+
+        <!-- User Navigation (when logged in) -->
+        <div id="userNav" class="hidden bg-white rounded-lg shadow-md p-4 mb-6">
+            <div class="flex space-x-4">
+                <button id="myIssuesBtn" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">My Issues</button>
+                <button id="reportIssueBtn" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">Report New Issue</button>
+                <button id="profileBtn" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">Profile</button>
+                <span id="userInfo" class="px-4 py-2 text-sm text-gray-500"></span>
+            </div>
+        </div>
+
+        <!-- Map View -->
+        <div id="mapView" class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex flex-wrap gap-4 mb-4">
+                <select id="mapRadiusFilter" class="border border-gray-300 rounded-md px-3 py-2">
+                    <option value="5">5 km</option>
+                    <option value="10">10 km</option>
+                    <option value="20">20 km</option>
+                </select>
+                <select id="mapCategoryFilter" class="border border-gray-300 rounded-md px-3 py-2">
+                    <option value="">All Categories</option>
+                    <option value="roads">Roads</option>
+                    <option value="lighting">Lighting</option>
+                    <option value="water">Water Supply</option>
+                    <option value="cleanliness">Cleanliness</option>
+                    <option value="safety">Public Safety</option>
+                    <option value="obstructions">Obstructions</option>
+                </select>
+            </div>
+            <div id="map" class="map-container rounded-lg" style="min-height: 500px;"></div>
+        </div>
+
+        <!-- Issues Grid -->
+        <div id="issuesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Issues will be dynamically loaded here -->
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination" class="flex justify-center mt-8">
+            <!-- Pagination will be dynamically generated -->
+        </div>
+    </main>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <!-- Tab Navigation -->
+                <div class="flex border-b mb-4">
+                    <button id="loginTab" class="flex-1 py-2 px-4 text-center font-medium text-blue-600 border-b-2 border-blue-600">Login</button>
+                    <button id="registerTab" class="flex-1 py-2 px-4 text-center font-medium text-gray-500 hover:text-gray-700">Register</button>
+                </div>
+
+                <!-- Login Form -->
+                <div id="loginFormContainer">
+                    <form id="loginForm">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                            <input type="email" id="loginEmail" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                            <input type="password" id="loginPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div class="flex justify-between">
+                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Login</button>
+                            <button type="button" id="closeAuthModal" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Register Form -->
+                <div id="registerFormContainer" class="hidden">
+                    <form id="registerForm">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Username</label>
+                            <input type="text" id="registerUsername" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                            <input type="email" id="registerEmail" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Phone</label>
+                            <input type="tel" id="registerPhone" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                            <input type="password" id="registerPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div class="flex justify-between">
+                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Register</button>
+                            <button type="button" id="closeAuthModal" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Issue Modal -->
+    <div id="reportModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Report New Issue</h3>
+                <form id="reportForm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Pincode *</label>
+                            <input type="text" id="issuePincode" placeholder="Enter 6-digit pincode" class="w-full px-3 py-2 border border-gray-300 rounded-md" required maxlength="6" pattern="[0-9]{6}">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Area *</label>
+                            <input type="text" id="issueArea" placeholder="Enter area landmark or any " class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Category *</label>
+                            <select id="issueCategory" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                                <option value="">Select Category</option>
+                                <option value="roads">Roads</option>
+                                <option value="lighting">Lighting</option>
+                                <option value="water">Water Supply</option>
+                                <option value="cleanliness">Cleanliness</option>
+                                <option value="safety">Public Safety</option>
+                                <option value="obstructions">Obstructions</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Address *</label>
+                        <input type="text" id="locationAddress" placeholder="Enter address" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                    </div>
+                    <div class="mb-4" id="locationMapContainer" style="display:none;">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Location Map</label>
+                        <div id="locationMap" class="map-container rounded-lg mb-2"></div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Title *</label>
+                        <input type="text" id="issueTitle" placeholder="Brief description of the issue" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Street *</label>
+                        <textarea id="issueDescription" rows="3" placeholder="Detailed description with address" class="w-full px-3 py-2 border border-gray-300 rounded-md" required></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Upload Photos (up to 5)</label>
+                        <input type="file" id="issuePhotos" multiple accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <p class="text-xs text-gray-500 mt-1">Select photos to show the issue clearly</p>
+                    </div>
+                    <div class="mb-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="reportAnonymous" class="mr-2">
+                            <span class="text-sm text-gray-700">Report Anonymous</span>
+                        </label>
+                    </div>
+                    <div class="flex justify-between">
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Submit Issue</button>
+                        <button type="button" id="closeReportModal" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Issue Detail Modal -->
+    <div id="issueDetailModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900" id="detailTitle"></h3>
+                    <div class="flex space-x-2">
+                        <button id="editIssueBtn" class="hidden px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">Edit</button>
+                        <button id="deleteIssueBtn" class="hidden px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
+                        <button id="reportSpamBtn" class="px-3 py-1 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700">Report Spam</button>
+                        <button id="closeDetailModal" class="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600">Close</button>
+                    </div>
+                </div>
+                <div id="issueDetailContent">
+                    <!-- Issue details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
